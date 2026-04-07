@@ -406,7 +406,7 @@ const Dashboard = () => {
           {getBadges().map((badge, index) => (
             <div key={index} className={`badge-item ${badge.unlocked ? 'unlocked' : 'locked'}`}>
               <img 
-                src={`/badges/${badge.filename}`} 
+                src={`${process.env.PUBLIC_URL}/badges/${badge.filename}`} 
                 alt={badge.name}
                 className="badge-image"
                 style={{ opacity: badge.unlocked ? 1 : 0.3 }}
