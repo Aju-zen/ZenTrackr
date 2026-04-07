@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.css": "/Aju-zen/ZenTrackr.git/static/css/main.206eb365.css",
-    "main.js": "/Aju-zen/ZenTrackr.git/static/js/main.8a640cf9.js",
-    "index.html": "/Aju-zen/ZenTrackr.git/index.html",
-    "main.206eb365.css.map": "/Aju-zen/ZenTrackr.git/static/css/main.206eb365.css.map",
-    "main.8a640cf9.js.map": "/Aju-zen/ZenTrackr.git/static/js/main.8a640cf9.js.map"
+    "main.css": "/ZenTrackr/static/css/main.206eb365.css",
+    "main.js": "/ZenTrackr/static/js/main.8a640cf9.js",
+    "index.html": "/ZenTrackr/index.html",
+    "main.206eb365.css.map": "/ZenTrackr/static/css/main.206eb365.css.map",
+    "main.8a640cf9.js.map": "/ZenTrackr/static/js/main.8a640cf9.js.map"
   },
   "entrypoints": [
     "static/css/main.206eb365.css",
