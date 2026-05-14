@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
 const WeeklyTargets = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({
     startDate: "",
     goalType: "bulking",
@@ -46,7 +49,24 @@ const WeeklyTargets = () => {
 
   useEffect(() => {
     fetchExistingTargets();
-  }, []);
+    
+    // Check if we have calculated macros from the calculator
+    if (location.state?.calculatedMacros && location.state?.autoFill) {
+      const macros = location.state.calculatedMacros;
+      setForm({
+        ...form,
+        goalType: macros.goalType,
+        calMin: macros.calorieRange.min.toString(),
+        calMax: macros.calorieRange.max.toString(),
+        proMin: macros.proteinRange.min.toString(),
+        proMax: macros.proteinRange.max.toString(),
+        carbMin: macros.carbRange.min.toString(),
+        carbMax: macros.carbRange.max.toString(),
+        fatMin: macros.fatRange.min.toString(),
+        fatMax: macros.fatRange.max.toString()
+      });
+    }
+  }, [location.state]);
 
   const generateTargets = async (e) => {
     e.preventDefault();
@@ -341,6 +361,20 @@ const WeeklyTargets = () => {
         </div>
 
         <h3 style={{color: '#dc2626', textShadow: '0 0 10px rgba(220, 38, 38, 0.5)', marginTop: '30px'}}>🍽️ Nutrition Ranges</h3>
+        
+        <div style={{textAlign: 'center', marginBottom: '20px'}}>
+          <button 
+            type="button" 
+            className="btn-secondary" 
+            onClick={() => navigate('/macro-calculator')}
+            style={{padding: '12px 24px', fontSize: '14px'}}
+          >
+            🧮 Calculate My Macros
+          </button>
+          <p style={{fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '8px'}}>
+            Let our calculator find the perfect ranges for your goals
+          </p>
+        </div>
         
         <div className="stats-grid">
           <div className="form-group">

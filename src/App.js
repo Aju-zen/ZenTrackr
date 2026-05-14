@@ -8,6 +8,7 @@ import Analytics from "./components/Analytics";
 import Settings from "./components/Settings";
 import WeeklyProgress from "./components/WeeklyProgress";
 import Login from "./components/Login";
+import MacroCalculator from "./components/MacroCalculator";
 import { supabase } from "./services/supabase";
 
 function Navigation({ onLogout }) {
@@ -131,6 +132,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/daily" element={<DailyEntry />} />
           <Route path="/targets" element={<WeeklyTargets />} />
+          <Route path="/macro-calculator" element={<MacroCalculator />} />
           <Route path="/reminders" element={<Reminders />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/weekly-progress" element={<WeeklyProgress />} />
