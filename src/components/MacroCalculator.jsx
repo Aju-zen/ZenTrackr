@@ -62,25 +62,26 @@ const MacroCalculator = () => {
     const proteinGrams = Math.round(proteinCalories / 4);
     const fatGrams = Math.round(fatCalories / 9);
     
-    // Create ranges (±10% for flexibility)
+    // Create ranges (+100 calories for max, -100 for min)
     const calorieRange = {
-      min: Math.round(targetCalories * 0.9),
-      max: Math.round(targetCalories * 1.1)
+      min: Math.round(targetCalories - 100),
+      max: Math.round(targetCalories + 100)
     };
     
+    // For macros, use ±5% for tighter control
     const carbRange = {
-      min: Math.round(carbGrams * 0.9),
-      max: Math.round(carbGrams * 1.1)
+      min: Math.round(carbGrams * 0.95),
+      max: Math.round(carbGrams * 1.05)
     };
     
     const proteinRange = {
-      min: Math.round(proteinGrams * 0.9),
-      max: Math.round(proteinGrams * 1.1)
+      min: Math.round(proteinGrams * 0.95),
+      max: Math.round(proteinGrams * 1.05)
     };
     
     const fatRange = {
-      min: Math.round(fatGrams * 0.9),
-      max: Math.round(fatGrams * 1.1)
+      min: Math.round(fatGrams * 0.95),
+      max: Math.round(fatGrams * 1.05)
     };
 
     setResults({
@@ -295,6 +296,7 @@ const MacroCalculator = () => {
           <div className="recommendations">
             <p>• <strong>Goal Type:</strong> {results.goalType === 'bulking' ? 'Muscle Gain (Bulking)' : 'Weight Loss'}</p>
             <p>• <strong>Calorie Distribution:</strong> 60% Carbs, 20% Protein, 20% Fat</p>
+            <p>• <strong>Range Logic:</strong> ±100 calories, ±5% macros for precise control</p>
             <p>• <strong>Tracking Tip:</strong> Stay within the ranges for best results</p>
             <p>• <strong>Adjustment:</strong> Monitor progress and adjust if needed after 2-3 weeks</p>
           </div>
