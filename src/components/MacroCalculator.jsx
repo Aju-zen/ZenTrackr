@@ -200,10 +200,14 @@ const MacroCalculator = () => {
   };
 
   const handleUseResults = () => {
-    // Navigate back to weekly targets with calculated values
-    navigate('/weekly-targets', { 
+    // Navigate back to targets with calculated values
+    navigate('/targets', { 
       state: { 
-        calculatedMacros: results,
+        calculatedMacros: {
+          ...results,
+          baseWeight: parseFloat(formData.currentWeight),
+          targetWeight: parseFloat(formData.targetWeight)
+        },
         autoFill: true 
       } 
     });
@@ -310,30 +314,8 @@ const MacroCalculator = () => {
   if (results) {
     return (
       <div>
-        <h2 className="page-title">🎯 Your Macro Results</h2>
+        <h2 className="page-title">🎯 Your Macro Targets</h2>
         
-        <div className="card">
-          <h3>📊 Calculated Values</h3>
-          <div className="results-grid">
-            <div className="result-item">
-              <div className="result-label">BMR (Base Metabolic Rate)</div>
-              <div className="result-value">{results.bmr} cal/day</div>
-            </div>
-            <div className="result-item">
-              <div className="result-label">TDEE (Total Daily Energy)</div>
-              <div className="result-value">{results.tdee} cal/day</div>
-            </div>
-            <div className="result-item">
-              <div className="result-label">Target Calories</div>
-              <div className="result-value">{results.targetCalories} cal/day</div>
-            </div>
-            <div className="result-item">
-              <div className="result-label">Weekly Goal</div>
-              <div className="result-value">{Math.abs(results.weeklyChange)} kg/week</div>
-            </div>
-          </div>
-        </div>
-
         <div className="card">
           <h3>🍽️ Recommended Macro Ranges</h3>
           <div className="macro-results">
@@ -349,17 +331,7 @@ const MacroCalculator = () => {
             
             <div className="macro-item">
               <div className="macro-header">
-                <span className="macro-name">Carbs (60%)</span>
-                <span className="macro-range">{results.carbRange.min}g - {results.carbRange.max}g</span>
-              </div>
-              <div className="macro-bar">
-                <div className="macro-fill" style={{width: '60%', background: '#22c55e'}}></div>
-              </div>
-            </div>
-            
-            <div className="macro-item">
-              <div className="macro-header">
-                <span className="macro-name">Protein (20%)</span>
+                <span className="macro-name">Protein</span>
                 <span className="macro-range">{results.proteinRange.min}g - {results.proteinRange.max}g</span>
               </div>
               <div className="macro-bar">
@@ -369,7 +341,17 @@ const MacroCalculator = () => {
             
             <div className="macro-item">
               <div className="macro-header">
-                <span className="macro-name">Fat (20%)</span>
+                <span className="macro-name">Carbs</span>
+                <span className="macro-range">{results.carbRange.min}g - {results.carbRange.max}g</span>
+              </div>
+              <div className="macro-bar">
+                <div className="macro-fill" style={{width: '60%', background: '#22c55e'}}></div>
+              </div>
+            </div>
+            
+            <div className="macro-item">
+              <div className="macro-header">
+                <span className="macro-name">Fat</span>
                 <span className="macro-range">{results.fatRange.min}g - {results.fatRange.max}g</span>
               </div>
               <div className="macro-bar">
@@ -380,11 +362,10 @@ const MacroCalculator = () => {
         </div>
 
         <div className="card">
-          <h3>💡 Recommendations</h3>
+          <h3>💡 Goal Summary</h3>
           <div className="recommendations">
             <p>• <strong>Goal Type:</strong> {results.goalType === 'bulking' ? 'Muscle Gain (Bulking)' : 'Weight Loss'}</p>
-            <p>• <strong>Calorie Distribution:</strong> 60% Carbs, 20% Protein, 20% Fat</p>
-            <p>• <strong>Range Logic:</strong> ±100 calories, ±5% macros for precise control</p>
+            <p>• <strong>Weekly Target:</strong> {Math.abs(results.weeklyChange)} kg/week</p>
             <p>• <strong>Tracking Tip:</strong> Stay within the ranges for best results</p>
             <p>• <strong>Adjustment:</strong> Monitor progress and adjust if needed after 2-3 weeks</p>
           </div>
@@ -394,7 +375,7 @@ const MacroCalculator = () => {
           <button className="btn" onClick={handleUseResults} style={{marginRight: '10px'}}>
             ✅ Use These Values
           </button>
-          <button className="btn" onClick={() => navigate('/weekly-targets')}>
+          <button className="btn" onClick={() => navigate('/targets')}>
             ❌ Cancel
           </button>
         </div>
