@@ -156,6 +156,8 @@ const FoodAI = ({ onFoodAnalyzed }) => {
       setIsAnalyzing(false);
     }
   };
+
+  const analyzeWithGemini = async (imageData) => {
     if (!isAPIConfigured) {
       alert('Gemini API key not configured. Please add your API key to enable AI food scanning.\n\nSee GEMINI_SETUP.md for instructions.');
       return;
