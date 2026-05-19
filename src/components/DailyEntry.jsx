@@ -7,6 +7,7 @@ export default function DailyEntry() {
     entry_date: "",
     weight: "",
     calories: "",
+    calories_burnt: "",
     protein: "",
     carbs: "",
     fat: ""
@@ -20,6 +21,7 @@ export default function DailyEntry() {
       entry_date: today,
       weight: "",
       calories: "",
+      calories_burnt: "",
       protein: "",
       carbs: "",
       fat: ""
@@ -47,6 +49,7 @@ export default function DailyEntry() {
           entry_date: data.entry_date,
           weight: data.weight || "",
           calories: data.calories || "",
+          calories_burnt: data.calories_burnt || "",
           protein: data.protein || "",
           carbs: data.carbs || "",
           fat: data.fat || ""
@@ -57,6 +60,7 @@ export default function DailyEntry() {
           entry_date: date,
           weight: "",
           calories: "",
+          calories_burnt: "",
           protein: "",
           carbs: "",
           fat: ""
@@ -128,6 +132,7 @@ export default function DailyEntry() {
         entry_date: newForm.entry_date,
         weight: newForm.weight || null,
         calories: newForm.calories || null,
+        calories_burnt: newForm.calories_burnt || null,
         protein: newForm.protein || null,
         carbs: newForm.carbs || null,
         fat: newForm.fat || null
@@ -154,6 +159,7 @@ export default function DailyEntry() {
         entry_date: newForm.entry_date,
         weight: newForm.weight || null,
         calories: newForm.calories || null,
+        calories_burnt: newForm.calories_burnt || null,
         protein: newForm.protein || null,
         carbs: newForm.carbs || null,
         fat: newForm.fat || null
@@ -193,8 +199,12 @@ export default function DailyEntry() {
           <input type="number" name="weight" placeholder="Enter weight" value={form.weight} onChange={handleChange} />
         </div>
         <div className="form-group">
-          <label>Calories</label>
+          <label>Calories Consumed</label>
           <input type="number" name="calories" placeholder="Enter calories" value={form.calories} onChange={handleChange} />
+        </div>
+        <div className="form-group">
+          <label>Calories Burnt 🔥</label>
+          <input type="number" name="calories_burnt" placeholder="Exercise calories" value={form.calories_burnt} onChange={handleChange} />
         </div>
         <div className="form-group">
           <label>Protein (g)</label>

@@ -4,12 +4,16 @@ const FoodAI = ({ onFoodAnalyzed }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [editableResult, setEditableResult] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [inputMode, setInputMode] = useState(null); // 'photo', 'text', or null
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
 
   // Gemini API configuration
-  const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY'; // Add your API key here
+  const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || 'AIzaSyDDzDHgRXOyBxBXCFM7k57dgzisd90hWJU';
   const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`;
 
   // Check if API key is configured
@@ -67,7 +71,91 @@ const FoodAI = ({ onFoodAnalyzed }) => {
     }
   };
 
-  const analyzeWithGemini = async (imageData) => {
+  const analyzeTextWithGemini = async (foodText) => {
+    if (!isAPIConfigured) {
+      alert('Gemini API key not configured. Please add your API key to enable AI food analysis.\n\nSee GEMINI_SETUP.md for instructions.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+
+    try {
+      const requestBody = {
+        contents: [{
+          parts: [
+            {
+              text: `Analyze this food description and provide nutrition information in this exact JSON format:
+              {
+                "foodItems": [
+                  {
+                    "name": "food name",
+                    "quantity": "quantity described",
+                    "calories": number,
+                    "protein": number,
+                    "carbs": number,
+                    "fat": number,
+                    "confidence": "high/medium/low"
+                  }
+                ],
+                "totalCalories": number,
+                "totalProtein": number,
+                "totalCarbs": number,
+                "totalFat": number,
+                "notes": "any additional notes about the food or portion size"
+              }
+              
+              Food description: "${foodText}"
+              
+              Please provide realistic nutrition values for the described food items and quantities. If the description is unclear, make reasonable assumptions and set confidence to "low".`
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          topK: 32,
+          topP: 1,
+          maxOutputTokens: 1024,
+        }
+      };
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const analysisText = data.candidates[0].content.parts[0].text;
+      
+      // Extract JSON from the response
+      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const nutritionData = JSON.parse(jsonMatch[0]);
+        setAnalysisResult(nutritionData);
+        setEditableResult({
+          totalCalories: nutritionData.totalCalories,
+          totalProtein: nutritionData.totalProtein,
+          totalCarbs: nutritionData.totalCarbs,
+          totalFat: nutritionData.totalFat
+        });
+      } else {
+        throw new Error('Could not parse nutrition data from AI response');
+      }
+
+    } catch (error) {
+      console.error('Error analyzing food text:', error);
+      alert('Failed to analyze food description. Please try again or enter values manually.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
     if (!isAPIConfigured) {
       alert('Gemini API key not configured. Please add your API key to enable AI food scanning.\n\nSee GEMINI_SETUP.md for instructions.');
       return;
@@ -141,6 +229,12 @@ const FoodAI = ({ onFoodAnalyzed }) => {
       if (jsonMatch) {
         const nutritionData = JSON.parse(jsonMatch[0]);
         setAnalysisResult(nutritionData);
+        setEditableResult({
+          totalCalories: nutritionData.totalCalories,
+          totalProtein: nutritionData.totalProtein,
+          totalCarbs: nutritionData.totalCarbs,
+          totalFat: nutritionData.totalFat
+        });
       } else {
         throw new Error('Could not parse nutrition data from AI response');
       }
@@ -154,20 +248,43 @@ const FoodAI = ({ onFoodAnalyzed }) => {
   };
 
   const useAnalysisResult = () => {
-    if (analysisResult && onFoodAnalyzed) {
+    if (editableResult && onFoodAnalyzed) {
       onFoodAnalyzed({
-        calories: analysisResult.totalCalories,
-        protein: analysisResult.totalProtein,
-        carbs: analysisResult.totalCarbs,
-        fat: analysisResult.totalFat,
+        calories: editableResult.totalCalories,
+        protein: editableResult.totalProtein,
+        carbs: editableResult.totalCarbs,
+        fat: editableResult.totalFat,
         details: analysisResult
       });
       setAnalysisResult(null);
+      setEditableResult(null);
+      setIsEditing(false);
     }
   };
 
   const clearResult = () => {
     setAnalysisResult(null);
+    setEditableResult(null);
+    setIsEditing(false);
+    setInputMode(null);
+    setTextInput('');
+  };
+
+  const handleTextAnalysis = () => {
+    if (textInput.trim()) {
+      analyzeTextWithGemini(textInput.trim());
+    }
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditableResult(prev => ({
+      ...prev,
+      [field]: parseFloat(value) || 0
+    }));
+  };
+
+  const toggleEdit = () => {
+    setIsEditing(!isEditing);
   };
 
   return (
@@ -180,11 +297,40 @@ const FoodAI = ({ onFoodAnalyzed }) => {
         </div>
       )}
       
-      {isAPIConfigured && !showCamera && !analysisResult && !isAnalyzing && (
+      {isAPIConfigured && !inputMode && !analysisResult && !isAnalyzing && (
         <div className="ai-options">
           <h4>🤖 AI Food Scanner</h4>
           <p style={{fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '15px'}}>
-            Take a photo or upload an image to automatically detect calories and macros
+            Analyze food using photo or text description to automatically detect calories and macros
+          </p>
+          
+          <div className="input-mode-selection">
+            <button 
+              className="mode-option"
+              onClick={() => setInputMode('photo')}
+            >
+              <div className="mode-icon">📸</div>
+              <div className="mode-title">Take Photo</div>
+              <div className="mode-desc">Scan food with camera</div>
+            </button>
+            
+            <button 
+              className="mode-option"
+              onClick={() => setInputMode('text')}
+            >
+              <div className="mode-icon">✏️</div>
+              <div className="mode-title">Type Food</div>
+              <div className="mode-desc">Describe what you ate</div>
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {isAPIConfigured && inputMode === 'photo' && !showCamera && !analysisResult && !isAnalyzing && (
+        <div className="ai-options">
+          <h4>📸 Photo Analysis</h4>
+          <p style={{fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '15px'}}>
+            Take a photo or upload an image of your food
           </p>
           
           <div className="ai-buttons">
@@ -204,6 +350,14 @@ const FoodAI = ({ onFoodAnalyzed }) => {
             </button>
           </div>
           
+          <button 
+            className="btn-back"
+            onClick={() => setInputMode(null)}
+            style={{marginTop: '15px'}}
+          >
+            ← Back to Options
+          </button>
+          
           <input
             ref={fileInputRef}
             type="file"
@@ -211,6 +365,53 @@ const FoodAI = ({ onFoodAnalyzed }) => {
             onChange={handleFileUpload}
             style={{display: 'none'}}
           />
+        </div>
+      )}
+      
+      {isAPIConfigured && inputMode === 'text' && !analysisResult && !isAnalyzing && (
+        <div className="ai-options">
+          <h4>✏️ Text Analysis</h4>
+          <p style={{fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '15px'}}>
+            Describe your food and AI will estimate nutrition values
+          </p>
+          
+          <div className="text-input-container">
+            <textarea
+              className="food-text-input"
+              placeholder="e.g. 2 dosa with sambar, 1 cup rice with dal, large pizza slice..."
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              rows={3}
+            />
+            
+            <div className="text-examples">
+              <p style={{fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '8px'}}>Examples:</p>
+              <div className="example-tags">
+                <span className="example-tag" onClick={() => setTextInput('2 dosa with coconut chutney')}>2 dosa with chutney</span>
+                <span className="example-tag" onClick={() => setTextInput('1 cup rice with dal')}>1 cup rice with dal</span>
+                <span className="example-tag" onClick={() => setTextInput('chicken biryani 1 plate')}>chicken biryani 1 plate</span>
+                <span className="example-tag" onClick={() => setTextInput('2 roti with sabzi')}>2 roti with sabzi</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="ai-buttons">
+            <button 
+              className="btn" 
+              onClick={handleTextAnalysis}
+              disabled={!textInput.trim()}
+            >
+              🤖 Analyze Food
+            </button>
+            
+            <button 
+              className="btn-secondary"
+              onClick={() => setInputMode(null)}
+              style={{marginLeft: '10px'}}
+            >
+              ← Back to Options
+            </button>
+          </div>
         </div>
       )}
 
@@ -243,7 +444,10 @@ const FoodAI = ({ onFoodAnalyzed }) => {
           <div className="loading-spinner">🤖</div>
           <h4>Analyzing food...</h4>
           <p style={{color: 'rgba(255, 255, 255, 0.7)'}}>
-            AI is identifying the food and calculating nutrition values
+            {inputMode === 'text' ? 
+              'AI is processing your food description and calculating nutrition values' :
+              'AI is identifying the food and calculating nutrition values'
+            }
           </p>
         </div>
       )}
@@ -256,7 +460,7 @@ const FoodAI = ({ onFoodAnalyzed }) => {
             {analysisResult.foodItems.map((food, index) => (
               <div key={index} className="food-item">
                 <div className="food-name">
-                  {food.name} 
+                  {food.name} {food.quantity && `(${food.quantity})`}
                   <span className={`confidence ${food.confidence}`}>
                     ({food.confidence} confidence)
                   </span>
@@ -270,24 +474,68 @@ const FoodAI = ({ onFoodAnalyzed }) => {
 
           <div className="total-nutrition">
             <h5>📊 Total Nutrition:</h5>
-            <div className="nutrition-grid">
-              <div className="nutrition-item">
-                <span className="label">Calories:</span>
-                <span className="value">{analysisResult.totalCalories}</span>
+            {!isEditing ? (
+              <div className="nutrition-grid">
+                <div className="nutrition-item">
+                  <span className="label">Calories:</span>
+                  <span className="value">{editableResult?.totalCalories || analysisResult.totalCalories}</span>
+                </div>
+                <div className="nutrition-item">
+                  <span className="label">Protein:</span>
+                  <span className="value">{editableResult?.totalProtein || analysisResult.totalProtein}g</span>
+                </div>
+                <div className="nutrition-item">
+                  <span className="label">Carbs:</span>
+                  <span className="value">{editableResult?.totalCarbs || analysisResult.totalCarbs}g</span>
+                </div>
+                <div className="nutrition-item">
+                  <span className="label">Fat:</span>
+                  <span className="value">{editableResult?.totalFat || analysisResult.totalFat}g</span>
+                </div>
               </div>
-              <div className="nutrition-item">
-                <span className="label">Protein:</span>
-                <span className="value">{analysisResult.totalProtein}g</span>
+            ) : (
+              <div className="nutrition-edit-grid">
+                <div className="edit-item">
+                  <label>Calories:</label>
+                  <input
+                    type="number"
+                    value={editableResult?.totalCalories || ''}
+                    onChange={(e) => handleEditChange('totalCalories', e.target.value)}
+                    className="edit-input"
+                  />
+                </div>
+                <div className="edit-item">
+                  <label>Protein (g):</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editableResult?.totalProtein || ''}
+                    onChange={(e) => handleEditChange('totalProtein', e.target.value)}
+                    className="edit-input"
+                  />
+                </div>
+                <div className="edit-item">
+                  <label>Carbs (g):</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editableResult?.totalCarbs || ''}
+                    onChange={(e) => handleEditChange('totalCarbs', e.target.value)}
+                    className="edit-input"
+                  />
+                </div>
+                <div className="edit-item">
+                  <label>Fat (g):</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editableResult?.totalFat || ''}
+                    onChange={(e) => handleEditChange('totalFat', e.target.value)}
+                    className="edit-input"
+                  />
+                </div>
               </div>
-              <div className="nutrition-item">
-                <span className="label">Carbs:</span>
-                <span className="value">{analysisResult.totalCarbs}g</span>
-              </div>
-              <div className="nutrition-item">
-                <span className="label">Fat:</span>
-                <span className="value">{analysisResult.totalFat}g</span>
-              </div>
-            </div>
+            )}
           </div>
 
           {analysisResult.notes && (
@@ -299,6 +547,13 @@ const FoodAI = ({ onFoodAnalyzed }) => {
           <div className="result-actions">
             <button className="btn" onClick={useAnalysisResult}>
               ✅ Use These Values
+            </button>
+            <button 
+              className="btn-secondary" 
+              onClick={toggleEdit}
+              style={{marginLeft: '10px'}}
+            >
+              {isEditing ? '💾 Save Edits' : '✏️ Edit Values'}
             </button>
             <button className="btn-secondary" onClick={clearResult} style={{marginLeft: '10px'}}>
               🔄 Try Again

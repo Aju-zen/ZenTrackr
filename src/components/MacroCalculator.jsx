@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const MacroCalculator = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     currentWeight: "",
@@ -52,10 +53,13 @@ const MacroCalculator = () => {
       ? Math.round(tdee + dailyCalorieAdjustment)
       : Math.round(tdee - dailyCalorieAdjustment);
     
+    // Round to nearest 500
+    const roundedCalories = Math.round(targetCalories / 500) * 500;
+    
     // Calculate macros (60% carbs, 20% protein, 20% fat)
-    const carbCalories = targetCalories * 0.6;
-    const proteinCalories = targetCalories * 0.2;
-    const fatCalories = targetCalories * 0.2;
+    const carbCalories = roundedCalories * 0.6;
+    const proteinCalories = roundedCalories * 0.2;
+    const fatCalories = roundedCalories * 0.2;
     
     // Convert to grams
     const carbGrams = Math.round(carbCalories / 4);
@@ -64,8 +68,8 @@ const MacroCalculator = () => {
     
     // Create ranges (+100 calories for max, -100 for min)
     const calorieRange = {
-      min: Math.round(targetCalories - 100),
-      max: Math.round(targetCalories + 100)
+      min: Math.round(roundedCalories - 100),
+      max: Math.round(roundedCalories + 100)
     };
     
     // For macros, use ±5% for tighter control
@@ -87,7 +91,7 @@ const MacroCalculator = () => {
     setResults({
       bmr: Math.round(bmr),
       tdee: Math.round(tdee),
-      targetCalories,
+      targetCalories: roundedCalories,
       calorieRange,
       carbRange,
       proteinRange,
@@ -101,8 +105,92 @@ const MacroCalculator = () => {
     if (step < 4) {
       setStep(step + 1);
     } else {
-      calculateMacros();
+      // Calculate and directly navigate back with results
+      calculateAndReturn();
     }
+  };
+
+  const calculateAndReturn = () => {
+    const weight = parseFloat(formData.currentWeight);
+    const targetWeight = parseFloat(formData.targetWeight);
+    const weeklyChange = parseFloat(formData.weeklyGoal);
+    const activityMultiplier = activityOptions.find(a => a.value === formData.activityLevel)?.multiplier || 1.2;
+    
+    // Calculate BMR using Mifflin-St Jeor Equation (simplified for weight only)
+    const bmr = weight * 22; // Simplified: 22 calories per kg for average person
+    
+    // Calculate TDEE (Total Daily Energy Expenditure)
+    const tdee = bmr * activityMultiplier;
+    
+    // Determine if gaining or losing weight
+    const isGaining = targetWeight > weight;
+    const calorieAdjustment = weeklyChange * 7700; // 7700 calories per kg
+    const dailyCalorieAdjustment = calorieAdjustment / 7;
+    
+    // Calculate target calories
+    const targetCalories = isGaining 
+      ? Math.round(tdee + dailyCalorieAdjustment)
+      : Math.round(tdee - dailyCalorieAdjustment);
+    
+    // Round to nearest 500
+    const roundedCalories = Math.round(targetCalories / 500) * 500;
+    
+    // Calculate macros (60% carbs, 20% protein, 20% fat)
+    const carbCalories = roundedCalories * 0.6;
+    const proteinCalories = roundedCalories * 0.2;
+    const fatCalories = roundedCalories * 0.2;
+    
+    // Convert to grams
+    const carbGrams = Math.round(carbCalories / 4);
+    const proteinGrams = Math.round(proteinCalories / 4);
+    const fatGrams = Math.round(fatCalories / 9);
+    
+    // Create ranges (+100 calories for max, -100 for min)
+    const calorieRange = {
+      min: Math.round(roundedCalories - 100),
+      max: Math.round(roundedCalories + 100)
+    };
+    
+    // For macros, use ±5% for tighter control
+    const carbRange = {
+      min: Math.round(carbGrams * 0.95),
+      max: Math.round(carbGrams * 1.05)
+    };
+    
+    const proteinRange = {
+      min: Math.round(proteinGrams * 0.95),
+      max: Math.round(proteinGrams * 1.05)
+    };
+    
+    const fatRange = {
+      min: Math.round(fatGrams * 0.95),
+      max: Math.round(fatGrams * 1.05)
+    };
+
+    const calculatedMacros = {
+      bmr: Math.round(bmr),
+      tdee: Math.round(tdee),
+      targetCalories: roundedCalories,
+      calorieRange,
+      carbRange,
+      proteinRange,
+      fatRange,
+      goalType: isGaining ? "bulking" : "weight_loss",
+      weeklyChange: isGaining ? weeklyChange : -weeklyChange
+    };
+
+    // Navigate back to weekly targets with calculated values
+    const returnTo = location.state?.returnTo || '/targets';
+    navigate(returnTo, { 
+      state: { 
+        calculatedMacros: {
+          ...calculatedMacros,
+          baseWeight: weight,
+          targetWeight: targetWeight
+        },
+        autoFill: true 
+      } 
+    });
   };
 
   const handleBack = () => {
@@ -344,7 +432,7 @@ const MacroCalculator = () => {
               (step === 4 && !formData.weeklyGoal)
             }
           >
-            {step === 4 ? 'Calculate 🧮' : 'Next →'}
+            {step === 4 ? 'Calculate & Apply 🧮' : 'Next →'}
           </button>
         </div>
       </div>

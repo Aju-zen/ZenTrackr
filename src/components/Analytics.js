@@ -247,14 +247,16 @@ const Analytics = () => {
     const totals = entries.reduce((acc, entry) => ({
       weight: acc.weight + (entry.weight || 0),
       calories: acc.calories + (entry.calories || 0),
+      calories_burnt: acc.calories_burnt + (entry.calories_burnt || 0),
       protein: acc.protein + (entry.protein || 0),
       carbs: acc.carbs + (entry.carbs || 0),
       fat: acc.fat + (entry.fat || 0)
-    }), { weight: 0, calories: 0, protein: 0, carbs: 0, fat: 0 });
+    }), { weight: 0, calories: 0, calories_burnt: 0, protein: 0, carbs: 0, fat: 0 });
 
     return {
       avgWeight: (totals.weight / entries.length).toFixed(1),
       avgCalories: (totals.calories / entries.length).toFixed(0),
+      avgCaloriesBurnt: (totals.calories_burnt / entries.length).toFixed(0),
       avgProtein: (totals.protein / entries.length).toFixed(1),
       avgCarbs: (totals.carbs / entries.length).toFixed(1),
       avgFat: (totals.fat / entries.length).toFixed(1),
@@ -502,6 +504,7 @@ const Analytics = () => {
                 <div className="table-cell">Date</div>
                 <div className="table-cell">Weight</div>
                 <div className="table-cell">Calories</div>
+                <div className="table-cell">Burnt 🔥</div>
                 <div className="table-cell">Protein</div>
                 <div className="table-cell">Carbs</div>
                 <div className="table-cell">Fat</div>
@@ -516,6 +519,7 @@ const Analytics = () => {
                   </div>
                   <div className="table-cell">{entry.weight || '-'}</div>
                   <div className="table-cell">{entry.calories || '-'}</div>
+                  <div className="table-cell">{entry.calories_burnt || '-'}</div>
                   <div className="table-cell">{entry.protein || '-'}</div>
                   <div className="table-cell">{entry.carbs || '-'}</div>
                   <div className="table-cell">{entry.fat || '-'}</div>

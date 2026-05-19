@@ -5,11 +5,13 @@ import { supabase } from "../services/supabase";
 const WeeklyTargets = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [calculationMode, setCalculationMode] = useState(null); // 'manual' or 'automatic'
   const [form, setForm] = useState({
     startDate: "",
     goalType: "bulking",
     weeklyGain: "",
     baseWeight: "",
+    targetWeight: "",
     calMin: "",
     calMax: "",
     proMin: "",
@@ -56,6 +58,9 @@ const WeeklyTargets = () => {
       setForm({
         ...form,
         goalType: macros.goalType,
+        baseWeight: macros.baseWeight?.toString() || "",
+        targetWeight: macros.targetWeight?.toString() || "",
+        weeklyGain: Math.abs(macros.weeklyChange)?.toString() || "",
         calMin: macros.calorieRange.min.toString(),
         calMax: macros.calorieRange.max.toString(),
         proMin: macros.proteinRange.min.toString(),
@@ -74,7 +79,14 @@ const WeeklyTargets = () => {
     const { startDate, goalType, weeklyGain, baseWeight, calMin, calMax, proMin, proMax, carbMin, carbMax, fatMin, fatMax } = form;
 
     const start = new Date(startDate);
-    const weeks = 17;
+    
+    // Calculate number of weeks based on weight difference and weekly goal
+    const currentWeight = parseFloat(baseWeight);
+    const targetWeight = parseFloat(form.targetWeight || baseWeight); // Add target weight to form
+    const weeklyRate = parseFloat(weeklyGain);
+    const weightDifference = Math.abs(targetWeight - currentWeight);
+    const weeks = Math.ceil(weightDifference / weeklyRate);
+    
     let targets = [];
 
     for (let i = 0; i < weeks; i++) {
@@ -84,12 +96,18 @@ const WeeklyTargets = () => {
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
 
+      // Calculate progressive target weight
+      const isGaining = targetWeight > currentWeight;
+      const progressiveWeight = isGaining 
+        ? currentWeight + (weeklyRate * (i + 1))
+        : currentWeight - (weeklyRate * (i + 1));
+
       targets.push({
         week_number: i + 1,
         start_date: weekStart.toISOString().split("T")[0],
         end_date: weekEnd.toISOString().split("T")[0],
         goal_type: goalType,
-        target_weight: parseFloat(baseWeight) + parseFloat(weeklyGain) * (i + 1),
+        target_weight: Math.round(progressiveWeight * 10) / 10, // Round to 1 decimal
         target_calories_min: calMin,
         target_calories_max: calMax,
         target_protein_min: proMin,
@@ -112,7 +130,7 @@ const WeeklyTargets = () => {
       console.error("Error inserting weekly targets:", error);
     } else {
       console.log("Inserted weekly targets:", data);
-      alert("Weekly targets generated successfully!");
+      alert(`${weeks}-week targets generated successfully!`);
       fetchExistingTargets();
     }
   };
@@ -232,6 +250,48 @@ const WeeklyTargets = () => {
     );
   }
 
+  // Show calculation mode selection when no targets exist
+  if (!calculationMode) {
+    return (
+      <div>
+        <h2 className="page-title">🎯 Target Setter</h2>
+        <div className="card">
+          <h3 style={{textAlign: 'center', marginBottom: '30px'}}>Choose Your Setup Method</h3>
+          
+          <div className="calculation-options">
+            <div 
+              className="calculation-option"
+              onClick={() => setCalculationMode('manual')}
+            >
+              <div className="option-icon">✏️</div>
+              <div className="option-title">Manual Entry</div>
+              <div className="option-description">
+                Enter your macro ranges manually based on your knowledge or existing plan
+              </div>
+            </div>
+            
+            <div 
+              className="calculation-option"
+              onClick={() => setCalculationMode('automatic')}
+            >
+              <div className="option-icon">🧮</div>
+              <div className="option-title">Automatic Calculation</div>
+              <div className="option-description">
+                Let AI calculate optimal macro ranges based on your goals and activity level
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If automatic calculation is selected, redirect to macro calculator
+  if (calculationMode === 'automatic') {
+    navigate('/macro-calculator', { state: { returnTo: '/targets' } });
+    return null;
+  }
+
   if (editMode) {
     return (
       <div>
@@ -348,33 +408,54 @@ const WeeklyTargets = () => {
           </div>
 
           <div className="form-group">
-            <label>Weekly Gain (kg)</label>
+            <label>Target Weight (kg)</label>
             <input
               type="number"
-              step="0.1"
-              placeholder="e.g. 0.5"
-              value={form.weeklyGain}
-              onChange={(e) => setForm({ ...form, weeklyGain: e.target.value })}
+              placeholder="e.g. 65"
+              value={form.targetWeight}
+              onChange={(e) => setForm({ ...form, targetWeight: e.target.value })}
               required
             />
           </div>
         </div>
 
-        <h3 style={{color: '#dc2626', textShadow: '0 0 10px rgba(220, 38, 38, 0.5)', marginTop: '30px'}}>🍽️ Nutrition Ranges</h3>
-        
-        <div style={{textAlign: 'center', marginBottom: '20px'}}>
-          <button 
-            type="button" 
-            className="btn-secondary" 
-            onClick={() => navigate('/macro-calculator')}
-            style={{padding: '12px 24px', fontSize: '14px'}}
-          >
-            🧮 Calculate My Macros
-          </button>
-          <p style={{fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '8px'}}>
-            Let our calculator find the perfect ranges for your goals
-          </p>
+        <div className="form-group">
+          <label>Weekly Rate (kg/week)</label>
+          <input
+            type="number"
+            step="0.1"
+            placeholder="e.g. 0.5"
+            value={form.weeklyGain}
+            onChange={(e) => setForm({ ...form, weeklyGain: e.target.value })}
+            required
+          />
         </div>
+
+        {form.baseWeight && form.targetWeight && form.weeklyGain && (
+          <div className="goal-preview">
+            {parseFloat(form.targetWeight) > parseFloat(form.baseWeight) ? (
+              <div style={{background: 'rgba(34, 197, 94, 0.1)', padding: '15px', borderRadius: '8px', textAlign: 'center'}}>
+                <p style={{color: '#22c55e', margin: '5px 0'}}>
+                  💪 Goal: Gain {(parseFloat(form.targetWeight) - parseFloat(form.baseWeight)).toFixed(1)} kg
+                </p>
+                <p style={{color: 'rgba(255, 255, 255, 0.8)', margin: '5px 0'}}>
+                  Duration: {Math.ceil(Math.abs(parseFloat(form.targetWeight) - parseFloat(form.baseWeight)) / parseFloat(form.weeklyGain))} weeks
+                </p>
+              </div>
+            ) : (
+              <div style={{background: 'rgba(239, 68, 68, 0.1)', padding: '15px', borderRadius: '8px', textAlign: 'center'}}>
+                <p style={{color: '#ef4444', margin: '5px 0'}}>
+                  🔥 Goal: Lose {(parseFloat(form.baseWeight) - parseFloat(form.targetWeight)).toFixed(1)} kg
+                </p>
+                <p style={{color: 'rgba(255, 255, 255, 0.8)', margin: '5px 0'}}>
+                  Duration: {Math.ceil(Math.abs(parseFloat(form.targetWeight) - parseFloat(form.baseWeight)) / parseFloat(form.weeklyGain))} weeks
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        <h3 style={{color: '#dc2626', textShadow: '0 0 10px rgba(220, 38, 38, 0.5)', marginTop: '30px'}}>🍽️ Nutrition Ranges</h3>
         
         <div className="stats-grid">
           <div className="form-group">
@@ -421,7 +502,12 @@ const WeeklyTargets = () => {
         </div>
 
         <div style={{textAlign: 'center', marginTop: '30px'}}>
-          <button type="submit" className="btn">✨ Generate 17-Week Targets</button>
+          <button type="submit" className="btn">
+            ✨ Generate {form.baseWeight && form.targetWeight && form.weeklyGain ? 
+              Math.ceil(Math.abs(parseFloat(form.targetWeight) - parseFloat(form.baseWeight)) / parseFloat(form.weeklyGain)) + '-Week' : 
+              'Dynamic'
+            } Targets
+          </button>
         </div>
       </form>
       </div>

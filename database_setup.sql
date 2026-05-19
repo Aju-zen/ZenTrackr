@@ -11,6 +11,7 @@ CREATE TABLE daily_entries (
     entry_date DATE NOT NULL,
     weight DECIMAL(5,2),
     calories INTEGER,
+    calories_burnt INTEGER,
     protein DECIMAL(6,2),
     carbs DECIMAL(6,2),
     fat DECIMAL(6,2),
