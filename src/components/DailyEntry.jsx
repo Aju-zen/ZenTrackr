@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { addDailyEntry, updateDailyEntry, supabase } from "../services/supabase";
+import FoodAI from "./FoodAI";
 
 export default function DailyEntry() {
   const [form, setForm] = useState({
@@ -135,6 +136,32 @@ export default function DailyEntry() {
     }
   };
 
+  const handleFoodAnalyzed = (nutritionData) => {
+    // Add AI-detected values to current form values
+    const newForm = {
+      ...form,
+      calories: (parseInt(form.calories || 0) + nutritionData.calories).toString(),
+      protein: (parseFloat(form.protein || 0) + nutritionData.protein).toString(),
+      carbs: (parseFloat(form.carbs || 0) + nutritionData.carbs).toString(),
+      fat: (parseFloat(form.fat || 0) + nutritionData.fat).toString()
+    };
+    
+    setForm(newForm);
+    
+    // Auto-save the updated values
+    if (form.entry_date) {
+      const entryToSave = {
+        entry_date: newForm.entry_date,
+        weight: newForm.weight || null,
+        calories: newForm.calories || null,
+        protein: newForm.protein || null,
+        carbs: newForm.carbs || null,
+        fat: newForm.fat || null
+      };
+      debouncedSave(entryToSave, currentEntryId);
+    }
+  };
+
   function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -150,6 +177,10 @@ export default function DailyEntry() {
   return (
     <div>
       <h2 className="page-title">Track Today</h2>
+      
+      {/* AI Food Scanner */}
+      <FoodAI onFoodAnalyzed={handleFoodAnalyzed} />
+      
       <div className="card">
 
       <div className="form-group">
