@@ -73,6 +73,31 @@ const WeeklyTargets = () => {
     }
   }, [location.state]);
 
+  // Auto-generate targets when coming back from macro calculator with calculated values
+  useEffect(() => {
+    if (location.state?.calculatedMacros && location.state?.autoFill && calculationMode === null) {
+      const macros = location.state.calculatedMacros;
+      const autoForm = {
+        startDate: new Date().toISOString().split('T')[0], // Today's date
+        goalType: macros.goalType,
+        baseWeight: macros.baseWeight?.toString() || "",
+        targetWeight: macros.targetWeight?.toString() || "",
+        weeklyGain: Math.abs(macros.weeklyChange)?.toString() || "",
+        calMin: macros.calorieRange.min.toString(),
+        calMax: macros.calorieRange.max.toString(),
+        proMin: macros.proteinRange.min.toString(),
+        proMax: macros.proteinRange.max.toString(),
+        carbMin: macros.carbRange.min.toString(),
+        carbMax: macros.carbRange.max.toString(),
+        fatMin: macros.fatRange.min.toString(),
+        fatMax: macros.fatRange.max.toString()
+      };
+      
+      // Auto-generate targets immediately
+      generateTargetsFromCalculation(autoForm);
+    }
+  }, [location.state, calculationMode]);
+
   const generateTargets = async (e) => {
     e.preventDefault();
 
@@ -291,31 +316,6 @@ const WeeklyTargets = () => {
     navigate('/macro-calculator', { state: { returnTo: '/targets' } });
     return null;
   }
-
-  // Auto-generate targets when coming back from macro calculator with calculated values
-  useEffect(() => {
-    if (location.state?.calculatedMacros && location.state?.autoFill && calculationMode === null) {
-      const macros = location.state.calculatedMacros;
-      const autoForm = {
-        startDate: new Date().toISOString().split('T')[0], // Today's date
-        goalType: macros.goalType,
-        baseWeight: macros.baseWeight?.toString() || "",
-        targetWeight: macros.targetWeight?.toString() || "",
-        weeklyGain: Math.abs(macros.weeklyChange)?.toString() || "",
-        calMin: macros.calorieRange.min.toString(),
-        calMax: macros.calorieRange.max.toString(),
-        proMin: macros.proteinRange.min.toString(),
-        proMax: macros.proteinRange.max.toString(),
-        carbMin: macros.carbRange.min.toString(),
-        carbMax: macros.carbRange.max.toString(),
-        fatMin: macros.fatRange.min.toString(),
-        fatMax: macros.fatRange.max.toString()
-      };
-      
-      // Auto-generate targets immediately
-      generateTargetsFromCalculation(autoForm);
-    }
-  }, [location.state, calculationMode]);
 
   const generateTargetsFromCalculation = async (autoForm) => {
     const { startDate, goalType, weeklyGain, baseWeight, calMin, calMax, proMin, proMax, carbMin, carbMax, fatMin, fatMax } = autoForm;
