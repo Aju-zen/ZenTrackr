@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/ZenTrackr/static/css/main.51fcb425.css",
-    "main.js": "/ZenTrackr/static/js/main.467bcf53.js",
+    "main.js": "/ZenTrackr/static/js/main.b0921eeb.js",
     "index.html": "/ZenTrackr/index.html",
     "main.51fcb425.css.map": "/ZenTrackr/static/css/main.51fcb425.css.map",
-    "main.467bcf53.js.map": "/ZenTrackr/static/js/main.467bcf53.js.map"
+    "main.b0921eeb.js.map": "/ZenTrackr/static/js/main.b0921eeb.js.map"
   },
   "entrypoints": [
     "static/css/main.51fcb425.css",
-    "static/js/main.467bcf53.js"
+    "static/js/main.b0921eeb.js"
   ]
 }
