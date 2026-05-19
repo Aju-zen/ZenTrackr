@@ -49,33 +49,76 @@ const WeeklyTargets = () => {
     setExistingTargets(data || []);
   };
 
-  useEffect(() => {
-    fetchExistingTargets();
+  const generateTargetsFromCalculation = async (autoForm) => {
+    const { startDate, goalType, weeklyGain, baseWeight, calMin, calMax, proMin, proMax, carbMin, carbMax, fatMin, fatMax } = autoForm;
+
+    const start = new Date(startDate);
     
-    // Check if we have calculated macros from the calculator
-    if (location.state?.calculatedMacros && location.state?.autoFill) {
-      const macros = location.state.calculatedMacros;
-      setForm({
-        ...form,
-        goalType: macros.goalType,
-        baseWeight: macros.baseWeight?.toString() || "",
-        targetWeight: macros.targetWeight?.toString() || "",
-        weeklyGain: Math.abs(macros.weeklyChange)?.toString() || "",
-        calMin: macros.calorieRange.min.toString(),
-        calMax: macros.calorieRange.max.toString(),
-        proMin: macros.proteinRange.min.toString(),
-        proMax: macros.proteinRange.max.toString(),
-        carbMin: macros.carbRange.min.toString(),
-        carbMax: macros.carbRange.max.toString(),
-        fatMin: macros.fatRange.min.toString(),
-        fatMax: macros.fatRange.max.toString()
+    // Calculate number of weeks based on weight difference and weekly goal
+    const currentWeight = parseFloat(baseWeight);
+    const targetWeight = parseFloat(autoForm.targetWeight || baseWeight);
+    const weeklyRate = parseFloat(weeklyGain);
+    const weightDifference = Math.abs(targetWeight - currentWeight);
+    const weeks = Math.ceil(weightDifference / weeklyRate);
+    
+    let targets = [];
+
+    for (let i = 0; i < weeks; i++) {
+      const weekStart = new Date(start);
+      weekStart.setDate(start.getDate() + i * 7);
+
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      // Calculate progressive target weight
+      const isGaining = targetWeight > currentWeight;
+      const progressiveWeight = isGaining 
+        ? currentWeight + (weeklyRate * (i + 1))
+        : currentWeight - (weeklyRate * (i + 1));
+
+      targets.push({
+        week_number: i + 1,
+        start_date: weekStart.toISOString().split("T")[0],
+        end_date: weekEnd.toISOString().split("T")[0],
+        goal_type: goalType,
+        target_weight: Math.round(progressiveWeight * 10) / 10,
+        target_calories_min: calMin,
+        target_calories_max: calMax,
+        target_protein_min: proMin,
+        target_protein_max: proMax,
+        target_carbs_min: carbMin,
+        target_carbs_max: carbMax,
+        target_fat_min: fatMin,
+        target_fat_max: fatMax
       });
     }
-  }, [location.state]);
 
-  // Auto-generate targets when coming back from macro calculator with calculated values
+    // Add user_id to each target for regular users
+    const { data: { user } } = await supabase.auth.getUser();
+    const targetsWithUser = user && user.email !== 'admin' 
+      ? targets.map(target => ({ ...target, user_id: user.id }))
+      : targets;
+
+    const { data, error } = await supabase.from("weekly_targets").insert(targetsWithUser);
+    if (error) {
+      console.error("Error inserting weekly targets:", error);
+      alert("Error generating targets. Please try again.");
+    } else {
+      console.log("Inserted weekly targets:", data);
+      alert(`🎯 ${weeks}-week targets generated successfully from AI calculation!`);
+      await fetchExistingTargets();
+      // Clear the navigation state and force refresh
+      window.location.href = '/ZenTrackr/#/targets';
+    }
+  };
+
   useEffect(() => {
-    if (location.state?.calculatedMacros && location.state?.autoFill && calculationMode === null) {
+    fetchExistingTargets();
+  }, []);
+
+  useEffect(() => {
+    // Check if we have calculated macros from the calculator and auto-generate
+    if (location.state?.calculatedMacros && location.state?.autoFill) {
       const macros = location.state.calculatedMacros;
       const autoForm = {
         startDate: new Date().toISOString().split('T')[0], // Today's date
@@ -96,7 +139,7 @@ const WeeklyTargets = () => {
       // Auto-generate targets immediately
       generateTargetsFromCalculation(autoForm);
     }
-  }, [location.state, calculationMode]);
+  }, [location.state]);
 
   const generateTargets = async (e) => {
     e.preventDefault();
@@ -316,69 +359,6 @@ const WeeklyTargets = () => {
     navigate('/macro-calculator', { state: { returnTo: '/targets' } });
     return null;
   }
-
-  const generateTargetsFromCalculation = async (autoForm) => {
-    const { startDate, goalType, weeklyGain, baseWeight, calMin, calMax, proMin, proMax, carbMin, carbMax, fatMin, fatMax } = autoForm;
-
-    const start = new Date(startDate);
-    
-    // Calculate number of weeks based on weight difference and weekly goal
-    const currentWeight = parseFloat(baseWeight);
-    const targetWeight = parseFloat(autoForm.targetWeight || baseWeight);
-    const weeklyRate = parseFloat(weeklyGain);
-    const weightDifference = Math.abs(targetWeight - currentWeight);
-    const weeks = Math.ceil(weightDifference / weeklyRate);
-    
-    let targets = [];
-
-    for (let i = 0; i < weeks; i++) {
-      const weekStart = new Date(start);
-      weekStart.setDate(start.getDate() + i * 7);
-
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-
-      // Calculate progressive target weight
-      const isGaining = targetWeight > currentWeight;
-      const progressiveWeight = isGaining 
-        ? currentWeight + (weeklyRate * (i + 1))
-        : currentWeight - (weeklyRate * (i + 1));
-
-      targets.push({
-        week_number: i + 1,
-        start_date: weekStart.toISOString().split("T")[0],
-        end_date: weekEnd.toISOString().split("T")[0],
-        goal_type: goalType,
-        target_weight: Math.round(progressiveWeight * 10) / 10,
-        target_calories_min: calMin,
-        target_calories_max: calMax,
-        target_protein_min: proMin,
-        target_protein_max: proMax,
-        target_carbs_min: carbMin,
-        target_carbs_max: carbMax,
-        target_fat_min: fatMin,
-        target_fat_max: fatMax
-      });
-    }
-
-    // Add user_id to each target for regular users
-    const { data: { user } } = await supabase.auth.getUser();
-    const targetsWithUser = user && user.email !== 'admin' 
-      ? targets.map(target => ({ ...target, user_id: user.id }))
-      : targets;
-
-    const { data, error } = await supabase.from("weekly_targets").insert(targetsWithUser);
-    if (error) {
-      console.error("Error inserting weekly targets:", error);
-      alert("Error generating targets. Please try again.");
-    } else {
-      console.log("Inserted weekly targets:", data);
-      alert(`🎯 ${weeks}-week targets generated successfully from AI calculation!`);
-      fetchExistingTargets();
-      // Clear the navigation state
-      navigate('/targets', { replace: true });
-    }
-  };
 
   if (editMode) {
     return (
