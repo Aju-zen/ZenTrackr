@@ -105,8 +105,8 @@ const MacroCalculator = () => {
     if (step < 4) {
       setStep(step + 1);
     } else {
-      // Calculate and directly navigate back with results
-      calculateAndReturn();
+      // Calculate and show results
+      calculateMacros();
     }
   };
 
@@ -413,7 +413,7 @@ const MacroCalculator = () => {
               (step === 4 && !formData.weeklyGoal)
             }
           >
-            {step === 4 ? 'Calculate & Apply 🧮' : 'Next →'}
+            {step === 4 ? 'Calculate Results 🧮' : 'Next →'}
           </button>
         </div>
       </div>
