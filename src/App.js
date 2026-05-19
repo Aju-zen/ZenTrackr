@@ -125,7 +125,7 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router basename="/ZenTrackr">
       <div className="app">
         <Navigation onLogout={handleLogout} />
         <Routes>
